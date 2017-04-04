@@ -3,7 +3,9 @@
  * geo3D_topo_ops.sql
  *	  Topological operations for 3D geometries
  *
- * Copyright (c) 2017, Esteban Zimanyi, Université Libre de Bruxelles
+ * Portions Copyright (c) 2017, Esteban Zimanyi, UniversitÃ© Libre de Bruxelles
+ * Portions Copyright (c) 1996-2017, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
  *
  *-------------------------------------------------------------------------*/
 

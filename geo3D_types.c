@@ -3,6 +3,7 @@
  * geo3D_types.c
  *	  Type definitions for 3D geometries
  *
+ * Portions Copyright (c) 2017, Esteban Zimanyi, Université Libre de Bruxelles
  * Portions Copyright (c) 1996-2017, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
