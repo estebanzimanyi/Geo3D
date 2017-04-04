@@ -1,0 +1,4 @@
+comment = '3D geo index tests'
+default_version = '0.0.1'
+module_pathname = '$libdir/libGeo3D'
+
