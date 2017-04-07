@@ -1,0 +1,574 @@
+\documentclass[10pt]{article}
+
+%\usepackage{showframe}
+\usepackage[margin=2cm,a4paper]{geometry}
+\usepackage{comment}
+\usepackage{longtable}
+\usepackage{enumitem}
+\setlist{noitemsep, topsep=3pt}
+\usepackage[colorlinks,urlcolor=blue,linkcolor=blue,citecolor=blue]{hyperref}
+\usepackage{lscape}
+
+\begin{document}
+
+\section{3D Geometric Types}
+
+3D geometric data types represent three-dimensional spatial objects. 
+Table~\ref{tab:geo3dtypes} shows the 3D geometric types available in PostgreSQL.
+
+\begin{table}[htb]
+\centering
+\caption{3D Geometric Types}
+\label{tab:geo3dtypes}
+\begin{tabular}{|c|c|p{4.5cm}|l|}\hline
+Name & Storage Size & Description & Representation \\\hline\hline
+\verb+point3d+ & 24 bytes & Point on 3D space & \verb+(x,y,z)+ \\
+\verb+lseg3d+ & 48 bytes & Finite 3D line segment & \verb+((x1,y1,z1),(x2,y2,z2))+ \\
+\verb+line3d+ & 48 bytes & Infinite 3D line & \verb+((x1,y1,z1),(x2,y2,z2))+ \\
+\verb+box3d+ & 48 bytes & Rectangular 3D box & \verb+((x1,y1,z1),(x2,y2,z2))+ \\
+\verb+path3d+ & 64+24n bytes & Closed 3D path & \verb+((x1,y1,z1),...)+ \\
+\verb+path3d+ & 64+24n bytes & Open 3D path & \verb+[(x1,y1,z1),...]+ \\
+\verb+polygon3d+ & 56+24n bytes & 3D polygon & \verb+((x1,y1,z1),...)+ \\
+sphere & 32 bytes & 3D sphere & \verb+<(x,y,z),r>+\\\hline
+\end{tabular}
+\end{table}
+
+A rich set of functions and operators is available to perform various geometric operations such as scaling, translation, and determining intersections. They are explained in Section~\ref{sec:geo3dfcts}.
+
+\subsection{3D Points}
+
+3D points are the fundamental three-dimensional building block for 3D geometric types. 
+Values of type \verb+point3d+ are specified using either of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+( x , y , z )
+  x , y , z 
+\end{verbatim}
+\end{quote}
+where \verb+x+, \verb+y+, and \verb+z+ are the respective coordinates, as floating-point numbers.
+3D points are output using the first syntax.
+
+\begin{comment}
+The specific methods for 3D points are as follows:
+\begin{itemize}
+\item \verb+point3D_x(point Point3D)+: a
+\item \verb+point3D_y(point Point3D)+: b
+\item \verb+point3D_z(point Point3D)+: c
+\item \verb+point3D_horizontal(point1 Point3D, point2 Point3D)+: d
+\item \verb+point3D_vertical(point1 Point3D, point2 Point3D)+: e
+\item \verb+point3D_perpendicular(point1 Point3D, point2 Point3D)+: f
+\item \verb+point3D_collinear(point1 Point3D, point2 Point3D, point3 Point3D)+: g
+\end{itemize}
+\end{comment}
+
+\subsection{3D Line Segments}
+
+3D line segments are represented by pairs of 3D points that are the endpoints of the segment. 
+Values of type \verb+lseg3d+ are specified using any of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+[ ( x1 , y1 , z1 ) , ( x2 , y2 , z2 ) ]
+( ( x1 , y1 , z1 ) , ( x2 , y2 , z2 ) ) 
+  [ x1 , y1 , z1   ,   x2 , y2 , z2 ] 
+  ( x1 , y1 , z1   ,   x2 , y2 , z2 ) 
+  ( x1 , y1 , z1 ) , ( x2 , y2 , z2 )
+    x1 , y1 , z1   ,   x2 , y2 , z2 & 
+\end{verbatim}
+\end{quote}
+where \verb+(x1,y1,z1)+ and \verb+(x2,y2,z2)+ are the end points of the line segment.
+3D line segments are output using the first syntax.
+
+The two end points of a 3D line segment may be equal, in which case it represents a 3D point.
+
+\subsection{3D Lines}
+
+3D lines are specified by two of its points \verb+(x1,y1,z1)+ and \verb+(x2,y2,z2)+, 
+which must not be equal.
+The direction vector of this line is \verb+(a,b,c) = (x2-x1,y2-y1,z2-z1)+ and
+the parametric equations of the line are as follows
+\begin{quote}
+\begin{verbatim}
+x = x1 + at
+y = y1 + bt
+z = z1 + ct
+\end{verbatim}
+\end{quote}
+where \verb+t+ is any real number from $-\infty$ to $\infty$. Notice that the above equations also applies
+for 3D line segments, but in that case \verb+t+ is any real number in $[0,1]$.
+
+Values of type \verb+line3D+ are input and output in the following form:
+\begin{quote}
+\begin{verbatim}
+[ ( x1 , y1 , z1 ) , ( x2 , y2 , z2 ) ]
+( ( x1 , y1 , z1 ) , ( x2 , y2 , z2 ) ) 
+  [ x1 , y1 , z1   ,   x2 , y2 , z2 ] 
+  ( x1 , y1 , z1   ,   x2 , y2 , z2 ) 
+  ( x1 , y1 , z1 ) , ( x2 , y2 , z2 )
+    x1 , y1 , z1   ,   x2 , y2 , z2 & 
+\end{verbatim}
+\end{quote}
+3D lines are output using the first syntax.
+
+\subsection{3D Boxes}
+
+3D boxes are represented by pairs of points that are opposite corners of the box. 
+Values of type \verb+box3d+ are specified using any of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+( ( x1 , y1 , z1 ) , ( x2 , y2 , z2 ) )
+  ( x1 , y1 , z1 ) , ( x2 , y2 , z2 )
+    x1 , y1 , z1   ,   x2 , y2 , z2
+\end{verbatim}
+\end{quote}
+where \verb+(x1,y1,z1)+ and \verb+(x2,y2,z2)+ are any two opposite corners of the box.
+Boxes are output using the second syntax.
+Any two opposite corners can be supplied on input, but the values will be reordered 
+as needed to store the upper right and lower left corners, in that order.
+
+The two end points of a 3D box may be equal, in which case it represents a 3D point.
+The two end points of a 3D box may have be equal in one of the axes (\verb+x+, \verb+y+,
+or \verb+z+), in which case it represents a 2D rectangle perpendicular to the axis
+with equal values.
+
+\subsection{3D Paths}
+
+3D paths are represented by lists of connected points. Paths can be open, where the first and last points in the list are considered not connected, or closed, where the first and last points are considered connected. Connected
+paths are ``hollow", that is, they do not contain their interior.
+
+Values of type \verb+path3d+ are specified using any of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+[ ( x1 , y1 , z1 ) , ... , ( xn , yn , zn ) ]
+( ( x1 , y1 , z1 ) , ... , ( xn , yn , zn ) )
+  ( x1 , y1 , z1 ) , ... , ( xn , yn , zn )
+  ( x1 , y1 , z1   , ... ,   xn , yn , zn )
+    x1 , y1 , z1   , ... ,   xn , yn , zn 
+\end{verbatim}
+\end{quote}
+where the points are the end points of the line segments comprising the path. 
+Square brackets (\verb+[]+) indicate an open path, while parentheses (\verb+()+) 
+indicate a closed path. When the outermost parentheses are omitted, as in the third 
+through fifth syntaxes, a closed path is assumed.
+Paths are output using the first or second syntax, as appropriate.
+
+3d paths must contain at least one point. Furthermore, closed 3D paths must contain at least 3 non collinear points.
+
+\subsection{3D Polygons}
+
+3D polygons are represented by lists of points (the vertexes of the polygon). 
+Polygons are similar to closed paths, but unlike them, they include their interior.
+
+Values of type \verb+polygon3d+ are specified using any of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+( ( x1 , y1 , z1 ) , ... , ( xn , yn , zn ) )
+  ( x1 , y1 , z1 ) , ... , ( xn , yn , zn )
+  ( x1 , y1 , z1   , ... ,   xn , yn , zn )
+    x1 , y1 , z1   , ... ,   xn , yn , zn 
+\end{verbatim}
+\end{quote}
+where the points are the end points of the line segments comprising the boundary of the polygon.
+Polygons are output using the first syntax.
+
+As for closed 3D paths, 3D polygons must contain at least 3 non collinear points. 
+3D polygons must be planar so that are ``well behaved" with respect to their operations,
+such as determining whether a point is contained in the polygon. Although non planar polygons
+are valid values of the type \verb+polygon3D+, many of the operations return a null value
+for non planar polygons.
+
+\subsection{Spheres}
+
+Spheres are represented by a center point and radius. Values of type \verb+sphere+ 
+are specified using any of the following syntaxes:
+\begin{quote}
+\begin{verbatim}
+< ( x , y, z ) , r >
+( ( x , y, z ) , r )
+  ( x , y, z ) , r
+    x , y, z   , r
+\end{verbatim}
+\end{quote}
+where \verb+(x,y,z)+ is the center point and \verb+r+ is the radius of the sphere.
+Circles are output using the first syntax.
+
+\section{3D Geometric Functions and Operators}
+\label{sec:geo3dfcts}
+
+The geometric types \verb+point3d+, \verb+box3d+, \verb+lseg3d+, 
+\verb+line3d+, \verb+path3d+, \verb+polygon3d+, and \verb+sphere+ 
+have a large set of native support functions and operators, shown in 
+Table~\ref{tab:geo3doperators}, Table~\ref{tab:geo3dfunctions}, and 
+Table~\ref{tab:geo3dconversion}.
+
+The ``same as" operator, \verb+~=+, represents the usual notion 
+of equality for 3D geometries. In the case of 
+\verb+point3d+, \verb+box3d+, and \verb+sphere+ types the operator
+test whether the values are identical, while for the other types
+the operator tests whether the values represent the same set of
+points in 3D space. For example, in the case of the \verb+line3d+
+type the operator tests whether the two lines coincide, while
+for the \verb+path3d+ type the operator tests whether the two
+paths have the same set of vertices (but not necessarily in the same order).
+These types also have an \verb+=+ operator that test identical values. 
+The other scalar comparison operators (\verb+<=+ and so on) 
+are rather arbitrary and they are used internally for indexing purposes,
+they are not useful in the real world.
+
+It is possible to access the three component numbers of a \verb+point3d+ as 
+though the point were an array with indexes 0, 1, and 2. 
+For example, if \verb+t.p+ is a \verb+point+ column then 
+\verb+SELECT p[0] FROM t+ retrieves the \verb+x+ coordinate and 
+\verb+UPDATE t SET p[1] = ...+ changes the \verb+y+ coordinate. 
+In the same way,  a value of type \verb+lseg3d+, \verb+line3d+ or \verb+box3d+ 
+can be treated as an array of two point values.
+
+The \verb+area+ function works for the types \verb+box3d+, \verb+path3d+, 
+\verb+polygon3d+, and \verb+sphere+. 
+In the case of the \verb+path3d+ data type, the \verb+area+ function only works 
+if the path is closed, is planar, and is not self-crossing. 
+For example, the function applied to the path 
+\begin{quote}
+\begin{verbatim}
+'((0,0,0),(0,1,1),(2,1,1),(2,2,2),(1,2,2),(1,0,0))'::path3d
+\end{verbatim}
+\end{quote}
+will not work. However, the following the function applied to the visually identical path 
+\begin{quote}
+\begin{verbatim}
+'((0,0,0),(0,1,1),(1,1,1),(1,2,2),(2,2,2),(2,1,1),(1,1,1),(1,0,0),(0,0,0))'::path3d
+\end{verbatim}
+\end{quote}
+will work. Similarly, the \verb+area+ function only works 
+if the polygon is planar and is not self-crossing. 
+
+The \verb+box3d+ and \verb+sphere+ functions computing the bounding box and 
+bounding sphere work for all types excepted \verb+line3d+. 
+When applied to a \verb+point3d+ they return an empty box or sphere 
+representing the point. 
+
+The \verb+center+ function and the corresponding operator \verb+@@+ 
+work for all types excepted \verb+point3d+.
+
+The \verb+coplanar+ function works for various combinations of 
+types \verb+point3d+, \verb+lseg3d+, \verb+line3d+, \verb+path3d+, and 
+\verb+polygon3d+ that involve more than three points. For example,
+it works for \verb+point3d+ and \verb+polygon3d+ but neither for
+\verb+point3d+ and \verb+lseg3d+ (since it is trivially true)
+nor for \verb+point3d+ and \verb+point3d+ (since it does not make sense).
+
+The \verb+length+ function works for the types \verb+lseg3d+,
+\verb+path3d+, and \verb+polygon3d+.
+
+The function \verb+points+ work for all types excepted \verb+point3d+. 
+
+The \verb+point3d+ functions 
+computing the center work for all types excepted \verb+line3d+. 
+
+\section{Indexing}
+
+GiST and SP-GiST indexes can be created for table columns of some of the 3D geometry types.
+The GiST index implements an R-tree for the types 
+\verb+point3d+, \verb+box3d+, and \verb+sphere+. 
+The SP-GiST index implements an Oct-tree for the type \verb+point3d+.
+An example of creation of a GiST and an SP-GiST indexes is as follows:
+
+\begin{quote}
+\begin{verbatim}
+CREATE TABLE geo3d_tbl(k int, p point3d, b box3d, s sphere);
+CREATE INDEX geo3d_tbl_idx_p ON geo3d_tbl USING spgist (p);
+CREATE INDEX geo3d_tbl_idx_b ON geo3d_tbl USING gist (b);
+\end{verbatim}
+\end{quote}
+
+A GiST or SP-GiST index can accelerate queries involving the following operators: 
+\verb+<<+, \verb+&<+, \verb+&&+, \verb+&>+, \verb+>>+, \verb+~=+, \verb+@>+, \verb+<@+, \verb+&<|+, 
+\verb+<<|+, \verb+|>>+, \verb+|&>+, \verb+<->+, \verb+&</+, \verb+<</+, \verb+/>>+, and \verb+/&>+ 
+(see Table~\ref{tab:geo3doperators} for more information).
+
+In addition, B-tree indexes can be created for table columns of all 3D geometries. 
+For this index type, basically the only useful operation is equality. 
+There is a B-tree sort ordering defined for 3D geometry values, with corresponding 
+\verb+<+ and \verb+>+ operators, but the ordering is rather arbitrary and 
+not usually useful in the real world. B-tree support for 3D geometries 
+is primarily meant to allow sorting internally in queries, 
+rather than creation of actual indexes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{landscape}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\begin{longtable}{|c|l|l|}%
+\caption{3D Geometric Operators}
+\label{tab:geo3doperators}
+\\\hline
+Operator & Description & Example \\\hline\hline
+\endfirsthead
+
+\multicolumn{3}{c}%
+{\tablename\ \thetable{} 3D Geometric Types -- continued from previous page} \\
+\hline
+Operator & Description & Example \\\hline\hline
+\endhead
+
+\hline \multicolumn{3}{r}{Continued on next page} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+\verb!+! & Translation & 
+	\verb!box3d '((0,0,0),(1,1,1))' + point3d '(2.0,0,0)'! \\
+\verb+-+ & Translation & 
+	\verb+box3d '((0,0,0),(1,1,1))' - point3d '(2.0,0,0)'+ \\
+\verb+*+ & Scaling & 
+	\verb+box3d '((0,0,0),(1,1,1))' * 2.0+ \\
+\verb+/+ & Scaling & 
+	\verb+box3d '((0,0,0),(2,2,2))' / 2.0+ \\
+\verb!+! & Concatenation & 
+	\verb!path3d '[(0,0,0),(1,1,1)]' + path3d '[(2,0,0),(2,2,2)]'! \\
+\verb+#+ & Point or box of intersection & 
+	\verb+box3d '((1,-1,0),(-1,1,1))' # box3d '((1,1,1),(-2,-2,-2))'+ \\
+\verb+#+ & Number of points in path or polygon & 
+	\verb+# path3d '((1,0,0),(0,1,1),(-1,0,2))'+ \\
+\verb+@-@+ & Length of segment, path, or polygon & 
+	\verb+@-@ path3d '((0,0,0),(1,0,0))'+ \\
+\verb+@@+ & Center & 
+	\verb+@@ sphere '((0,0,0),10)'+ \\
+\verb+##+ & Closest point to first operand on second operand & 
+	\verb+point3d '(0,0,0)' ## lseg3d '((2,0,0),(0,2,1))'+ \\
+\verb+<->+ & Distance between & 
+	\verb+sphere '((0,0,0),1)' <-> sphere '((5,0,1),1)'+ \\
+\verb+&&+ & Overlaps? (One point in common makes this true) & 
+	\verb+box3d '((0,0,0),(1,1,1))' && box3d '((0,0,0),(2,2,2))'+ \\
+\verb+<<+ & Is strictly left of? & 
+	\verb+sphere '((0,0,0),1)' << sphere '((5,0,0),1)'+ \\
+\verb+>>+ & Is strictly right of? & 
+	\verb+sphere '((5,0,0),1)' >> sphere '((0,0,0),1)'+ \\
+\verb+&<+ & Does not extend to the right of?  & 
+	\verb+box3d '((0,0,0),(1,1,1))' &< box3d '((0,0,0),(2,2,2))'+ \\
+\verb+&>+ & Does not extend to the left of? & 
+	\verb+box3d '((0,0,0),(3,3,3))' &> box3d '((0,0,0),(2,2,2))'+ \\
+\verb+<<|+ & Is strictly below? & 
+	\verb+box3d '((0,0,0),(3,3,3))' <<| box3d '((3,4,4),(5,5,5))'+ \\
+\verb+|>>+ & Is strictly above? & 
+	\verb+box3d '((3,4,4),(5,5,5))' |>> box3d '((0,0,0),(3,3,3))'+ \\
+\verb+&<|+ & Does not extend above? & 
+	\verb+box3d '((0,0,0),(1,1,1))' &<| box3d '((0,0,0),(2,2,2))'+ \\
+\verb+|&>+ & Does not extend below? & 
+	\verb+box3d '((0,0,0),(3,3,3))' |&> box3d '((0,0,0),(2,2,2))'+ \\
+\verb+<</+ & Is strictly in front? & 
+	\verb+box3d '((0,0,0),(3,3,3))' <<| box3d '((3,4,4),(5,5,5))'+ \\
+\verb+/>>+ & Is strictly behind? & 
+	\verb+box3d '((3,4,4),(5,5,5))' |>> box3d '((0,0,0),(3,3,3))'+ \\
+\verb+&</+ & Does not extend in front? & 
+	\verb+box3d '((0,0,0),(1,1,1))' &<| box3d '((0,0,0),(2,2,2))'+ \\
+\verb+/&>+ & Does not extend below? & 
+	\verb+box3d '((0,0,0),(3,3,3))' |&> box3d '((0,0,0),(2,2,2))'+ \\
+\verb+?#+ & Intersects? & 
+	\verb+lseg3d '((-1,0),(1,0))' ?# box3d '((-2,-2),(2,2))'+ \\
+\verb+?-+ & Is horizontal? & 
+	\verb+?- lseg3d '((-1,0,0),(1,0,0))'+ \\
+\verb+?-+ & Are horizontally aligned? & 
+	\verb+point3d '(1,0,0)' ?- point3d '(0,0,0)'+ \\
+\verb+?|+ & Is vertical? & 
+	\verb+?| lseg3d '((-1,0,0),(1,0,1))'+ \\
+\verb+?|+ & Are vertically aligned? & 
+	\verb+point3d '(0,1)' ?| point3d '(0,0,0)'+ \\
+\verb+?/+ & Is perpendicular? & 
+	\verb+?/ lseg3d '((-1,0,1),(1,0,1))'+ \\
+\verb+?/+ & Are perpendicularly aligned? & 
+	\verb+point3d '(0,1,1)' ?/ point3d '(0,0,1)'+ \\
+\verb+?-|+ & Are orthogonal? & 
+	\verb+lseg3d '((0,0,0),(0,1,1))' ?-| lseg3d '((0,0,0),(1,0,1))'+ \\
+\verb+?||+ & Are parallel? & 
+	\verb+lseg3d '((-1,0,0),(1,0,1))' ?|| lseg3d '((-1,2,2),(1,2,3))'+ \\
+\verb+?-/+ & Are skew? & 
+	\verb+lseg3d '((-1,0,0),(1,0,1))' ?-/ lseg3d '((-1,2,2),(1,2,3))'+ \\
+\verb+@>+ & Contains? & 
+	\verb+sphere '((0,0,0),2)' @> point3d '(1,1,1)'+ \\
+\verb+<@+ & Contained in or on? & 
+	\verb+point3d '(1,1,1)' <@ sphere '((0,0,0),2)'+ \\
+\verb+~=+ & Same as? & 
+	\verb+polygon3D '((0,0,0),(1,1,1))' ~= polygon3D '((1,1,1),(0,0,0))'+ \\
+\end{longtable}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\begin{longtable}{|p{4cm}|l|l|l|}%
+\caption{3D Geometric Functions}
+\label{tab:geo3dfunctions}
+\\\hline
+Function & Return Type & Description & Example \\\hline\hline
+\endfirsthead
+
+\multicolumn{4}{c}%
+{\tablename\ \thetable{} 3D Geometric Functions -- continued from previous page} \\
+\hline
+Function & Return Type & Description & Example \\\hline\hline
+\endhead
+
+\hline \multicolumn{4}{r}{Continued on next page} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+\verb+area(object3d)+ & \verb+double precision+ & Area of object& 
+	\verb+area(sphere '((0,0,0),1)')+ \\
+\verb+center(object3d)+ & \verb+point3d+ & Center of object& 
+	\verb+center(box3d '((0,0,0),(2,2,2))')+ \\
+\verb+coincide(line3d,+
+\newline\hspace*{0.5cm}\verb+line3d)+ & \verb+boolean+ & Are the same line? & 
+	\verb+coincide(line3d '((0,0,0),(1,1,1))', line3d '((2,2,2),(3,3,3))')+ \\
+\verb+collinear(point3d,+
+\newline\hspace*{0.5cm}\verb+point3d, point3d)+ & \verb+boolean+ & Are the points collinear? & 
+	\verb+collinear(point3d '0,0,0', point3d '1,1,1', point3d '2,2,2')+ \\
+\verb+coplanar(object3d,+
+\newline\hspace*{0.5cm}\verb+object3d)+ & \verb+boolean+ & Are the objects coplanar? & 
+	\verb+coplanar(point3d '1,1,1', polygon3d '0,0,0,2,2,2,2,0,0')+ \\
+\verb+depth(box3d)+ & \verb+double precision+ & Perpendicular size of box & 
+	\verb+depth(box3d '((0,0,0),(1,2,3))')+ \\
+\verb+diameter(sphere)+ & \verb+double precision+ & Diameter of sphere & 
+	\verb+diameter(sphere '((0,0,0),2.0)')+ \\
+\verb+height(box3d)+ & \verb+double precision+ & Vertical size of box & 
+	\verb+height(box3d '((0,0,0),(1,2,3))')+ \\
+\verb+high(box3d)+ & \verb+point3d+ & High corner of box & 
+	\verb+high(box3d '((0,0,0),(1,2,3))')+ \\
+\verb+horizontal(point3d,+
+\newline\hspace*{0.5cm}\verb+point3d)+ & \verb+boolean+ & Are the y values equal? & 
+	\verb+horizontal(point3d '(0,0,0)', point3d '(1,0,1)')+ \\
+\verb+horizontal(lseg3d)+ & \verb+boolean+ & Are the y values equal? & 
+	\verb+horizontal(lseg3d '((0,0,0),(1,0,1))')+ \\
+\verb+horizontal(line3d)+ & \verb+boolean+ & Are the y values equal? & 
+	\verb+horizontal(line3d '((0,0,0),(1,0,1))')+ \\
+\verb+isclosed(path3d)+ & \verb+boolean+ & Is the path closed? & 
+	\verb+isclosed(path3d '((0,0,0),(1,1,1),(2,0))')+ \\
+\verb+isopen(path3d)+ & \verb+boolean+ & Is the path open? & 
+	\verb+isopen(path3d '[(0,0,0),(1,1,1),(2,0,0)]')+ \\
+\verb+isplanar(path3d)+ & \verb+boolean+ & Is the path planar? & 
+	\verb+isplanar(path3d '[(0,0,0),(1,1,1),(2,0,0)]')+ \\
+\verb+isplanar(polygon3d)+ & \verb+boolean+ & Is the polygon planar? & 
+	\verb+isplanar(polygon3d '((0,0,0),(0,1,1),(1,1,1),(1,0,0))')+ \\
+\verb+length(object3d)+ & \verb+double precision+ & Length of object & 
+	\verb+length(path3d '((-1,0,0),(1,0,1))')+ \\
+\verb+low(box3d)+ & \verb+point3d+ & Low corner of box & 
+	\verb+low(box3d '((0,0,0),(1,2,3))')+ \\
+\verb+npoints(path3d)+ & \verb+int+ & Number of points of path & 
+	\verb+npoints(path3d '[(0,0,0),(1,1,1),(2,0,0)]')+ \\
+\verb+npoints(polygon3d)+ & \verb+int+ & Number of points of polygon & 
+	\verb+npoints(polygon3d '((0,0,0),(0,1,1),(1,1,1),(1,0,0))')+ \\
+\verb+orthogonal(lseg3d,+
+\newline\hspace*{0.5cm}\verb+lseg3d)+ & \verb+boolean+ & Are orthogonal? & 
+	\verb+orthogonal(lseg3d '((0,0,0),(1,1,1))', lseg3d '((0,1,1),(1,0,1))')+ \\
+\verb+orthogonal(line3d,+
+\newline\hspace*{0.5cm}\verb+line3d)+ & \verb+boolean+ & Are orthogonal? & 
+	\verb+orthogonal(line3d '((0,0,0),(1,1,1))', line3d '((0,1,1),(1,0,1))')+ \\
+\verb+parallel(lseg3d,+
+\newline\hspace*{0.5cm}\verb+lseg3d)+ & \verb+boolean+ & Are orthogonal? & 
+	\verb+parallel(lseg3d '((0,0,0),(1,1,1))', lseg3d '((2,1,1),(3,2,2))')+ \\
+\verb+parallel(line3d,+
+\newline\hspace*{0.5cm}\verb+line3d)+ & \verb+boolean+ & Are orthogonal? & 
+	\verb+parallel(line3d '((0,0,0),(1,1,1))', line3d '((0,1,1),(1,0,1))')+ \\
+\verb+pclose(path3d)+ & \verb+path3d+ & Convert path to closed & 
+	\verb+pclose(path3d '[(0,0,1),(1,1,1),(2,0,0)]')+ \\
+\verb+perpendicular(point3d,+
+\newline\hspace*{0.5cm}\verb+point3d)+ & \verb+boolean+ & Are the z values equal? & 
+	\verb+perpendicular(point3d '(0,0,0)', point3d '(1,1,0)')+ \\	
+\verb+perpendicular(lseg3d)+ & \verb+boolean+ & Are the z values equal? & 
+	\verb+perpendicular(lseg3d '((0,0,0),(1,1,0))')+ \\	
+\verb+perpendicular(line3d)+ & \verb+boolean+ & Are the z values equal? & 
+	\verb+perpendicular(line3d '((0,0,0),(1,1,0))')+ \\	
+\verb+points(object3d)+ & \verb+point3D[]+ & Points of an object & 
+	\verb+points(polygon3d '((0,0,0),(0,1,1),(1,1,1),(1,0,0))')+ \\
+\verb+popen(path3d)+ & \verb+path3d+ & Convert path to open & 
+	\verb+popen(path3d '((0,0,0),(1,1,1),(2,0,0))')+ \\
+\verb+radius(sphere)+ & \verb+double precision+ & Radius of sphere & 
+	\verb+radius(sphere '((0,0,0),2.0)')+ \\
+\verb+segments(path3d)+ & \verb+lseg3D[]+ & Array of edges of path & 
+	\verb+segments(path3d '[(0,0,0),(1,1,1),(2,0,0)]')+ \\	
+\verb+segments(polygon3d)+ & \verb+lseg3D[]+ & Array of edges of polygon & 
+	\verb+segments(polygon3d '((0,0,0),(0,1,1),(1,1,1),(1,0,0))')+ \\
+\verb+skew(lseg3d, lseg3d)+ & \verb+boolean+ & Are skew? & 
+	\verb+skew(lseg3d '((0,0,0),(1,1,1))', lseg3d '((0,1,1),(1,0,2))')+ \\
+\verb+skew(line3d, line3d)+ & \verb+boolean+ & Are skew? & 
+	\verb+skew(line3d '((0,0,0),(1,1,1))', line3d '((0,1,1),(1,0,2))')+ \\
+\verb+vertical(point3d+
+\newline\hspace*{0.5cm}\verb+point3d)+ & \verb+boolean+ & Are the x values equal? & 
+	\verb+vertical(point3d '(0,0,0)', point3d '(0,1,1)')+ \\
+\verb+vertical(lseg3d)+ & \verb+boolean+ & Are the x values equal? & 
+	\verb+vertical(lseg3d '((0,0,0),(0,1,1))')+ \\
+\verb+vertical(line3d)+ & \verb+boolean+ & Are the x values equal? & 
+	\verb+vertical(line3d '((0,0,0),(0,1,1))')+ \\
+\verb+volume(box3d)+ & \verb+double precision+ & Volume of box & 
+	\verb+volume(box3d '((0,0,0),(1,1,1))')+ \\
+\verb+volume(sphere)+ & \verb+double precision+ & Volume of sphere & 
+	\verb+volume(sphere '((0,0,0),1))')+ \\
+\verb+width(box3d)+ & \verb+double precision+ & Horizontal size of box & 
+	\verb+width(box3d '((0,0,0),(1,2,3))')+ \\
+
+\end{longtable}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\begin{longtable}{|p{5cm}|l|l|p{12cm}|}%
+\caption{3D Geometric Type Conversion Functions}
+\label{tab:geo3dconversion}
+\\\hline
+Function & Return Type & Description & Example \\\hline\hline
+\endfirsthead
+
+\multicolumn{4}{c}%
+{\tablename\ \thetable{} 3D Geometric Type Conversion Functions -- continued from previous page} \\
+\hline
+Operator & Description & Example \\\hline\hline
+\endhead
+
+\hline \multicolumn{4}{r}{Continued on next page} \\
+\endfoot
+
+\hline
+\endlastfoot
+
+\verb+box3d(point3d, point3d)+ & \verb+box3d+ & points to box & 
+	\verb+box3d(point3d '(0,0,0)', point3d '(1,1,1)')+ \\
+\verb+box3d(object3d)+ & \verb+box3d+ & bounding box & 
+	\verb+box3d(sphere '((0,0,0),2.0)')+ \\
+\verb+box3d(box3d, box3d)+ & \verb+box3d+ & boxes to bounding box & 
+	\verb+box3d(box3d '((0,0,0),(1,1,1))', box3d '((3,3,3),(4,4,4))')+ \\
+\verb+line3d(point3d, point3d)+ & \verb+line3d+ & points to line & 
+	\verb+line3d(point3d '(-1,0,0)', point3d '(1,0,1)')+ \\
+\verb+lseg3d(box3d)+ & \verb+lseg3d+ & box diagonal to line segment & 
+	\verb+lseg3d(box3d '((-1,0,0),(1,0,1))')+ \\
+\verb+lseg3d(point3d, point3d)+ & \verb+lseg3d+ & points to line segment & 
+	\verb+lseg3d(point3d '(-1,0,0)', point3d '(1,0,1)')+ \\
+\verb+path3d(polygon3d)+ & \verb+path3d+ & polygon to path & 
+	\verb+path3d(polygon3d '((0,0,0),(1,1,1),(2,0,1))')+ \\
+\verb+point3d(double precision,+\newline\hspace*{5mm}\verb+double precision,+
+\newline\hspace*{5mm}\verb+double precision)+ & \verb+point+ & construct point & 
+	\verb+point3d(23.4, -44.5, 66.1)+ \\
+\verb+point3d(object3d)+ & \verb+point3d+ & center of object & 
+	\verb+point3d(box3d '((-1,0,0),(1,0,1))')+ \\
+\verb+polygon3d(path3d)+ & \verb+polygon3d+ & path to polygon & 
+	\verb+polygon3d(path3d '((0,0,0),(1,1,1),(2,0,0))')+ \\
+\verb+sphere(point3d,+\newline\hspace*{5mm}\verb+double precision)+ & 
+	\verb+sphere+ & center and radius to sphere & \verb+sphere(point3d '(0,0,0)', 2.0)+ \\
+\verb+sphere(object3d)+ & \verb+sphere+ & bounding sphere & 
+	\verb+sphere(lseg3d '((0,0,0),(1,1,1))')+ \\
+\verb+sphere(sphere, sphere)+ & \verb+sphere+ & spheres to bounding sphere & 
+	\verb+sphere(sphere '((0,0,0),1)', sphere '((2,0,0),1)')+ \\
+
+\end{longtable}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{landscape}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+
